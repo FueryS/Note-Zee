@@ -55,8 +55,8 @@ export const NoteManager = {
 
   // Modify only one specific row
   updateNote: async (id, headding, newMessage) => {
-    console.log("Message is attempted to be updated");
-    const date = new Date().toISOString();
+    // console.log("Message is attempted to be updated");
+    const date = new Date().toISOString(); // There is no way I spent 3 hours in debugging because I forgot to add const here
     const heading = headding ? headding : date;
 
     // Please remember the syntax of the querry, its different from INSERT INTO querry
@@ -64,7 +64,7 @@ export const NoteManager = {
       "UPDATE notes SET headding = ?, message = ?, date = ? WHERE id = ?;",
       [heading, newMessage, date, id],
     );
-    console.log("Message should be updated");
+    // console.log("Message should be updated");
     return db.getFirstAsync("SELECT * FROM notes WHERE id =?", [id]);
   },
 

@@ -3,13 +3,12 @@ import React, { useState, useEffect } from "react";
 import CustomButton from "./Components/UI/CustomButton.js";
 import Form from "./Components/Form.tsx";
 import TaskFullView from "./Components/TaskFullView.js";
+import { triggerHapticByValue } from "./Services/HepticService.js";
 
 import {
   StyleSheet,
   Text,
   View,
-  TextInput,
-  Button,
   FlatList,
   TouchableOpacity,
   Alert,
@@ -20,33 +19,60 @@ import { NoteManager } from "./Services/NoteManager.js";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { verticalScale } from "react-native-size-matters";
 
+// Trigger Heptic Note: add sound if you have time
+
 export default function App() {
   // a.  Handelling UI
 
-  const [showForm, setShowForm] = useState(false);
-  const [showPop, setShowPop] = useState(false);
+  const [showForm, setShowForm] = useState(false); // Flag to show the /Components/Form
+  const [showPop, setShowPop] = useState(false); // Flag to show the /Components/TaskFullView
 
-  const [popMessage, setPopMessage] = useState({});
+  const [popMessage, setPopMessage] = useState({}); // Chache of the popMessage shown in the /Components/TaskFullView
 
+  // This onTap is used to load the value of flatList elements (note list)
   const onTap = (id) => {
     setShowPop(true);
+    // Get the index position of this primarry key
     const i = index.indexOf(id);
+    // Chache the curretn popMessage so we can use it incase of update
     setPopMessage(notes[i]);
   };
 
+  // State switcher for update and save
   const onSaveNote = () => {
     if (updatingFlag) {
       performUpdate(popMessage.id);
-      console.log("Update was perfromed");
     } else handleAdd();
   };
 
+  // Handles update of the form
+  const handleUpdate = async () => {
+    // Load the popUpInfos values
+    setHeading(popMessage.headding);
+    setMessage(popMessage.message);
+
+    triggerHapticByValue(5);
+    setUpdatingFlag(true);
+    setShowPop(false);
+    setShowForm(true);
+  };
+
+  // Handles closing of the form
+  const handleClose = () => {
+    if (updatingFlag) {
+      setHeading("");
+      setMessage("");
+    }
+    setShowForm(false);
+    triggerHapticByValue(5);
+  };
+
   // b. API functions
-  const [notes, setNotes] = useState([]);
-  const [heading, setHeading] = useState();
-  const [message, setMessage] = useState("");
-  const [index, setIndex] = useState([]);
-  const [updatingFlag, setUpdatingFlag] = useState(false);
+  const [notes, setNotes] = useState([]); // Stores the notes : I feel bad about this cuz if theres like a 1000 notes It may cause overflow
+  const [heading, setHeading] = useState(); // Stores the current headding which we have typed in the form
+  const [message, setMessage] = useState(""); // Stores the curretn message in the form
+  const [index, setIndex] = useState([]); // It keeps track of the indexes of each primarry key in notes
+  const [updatingFlag, setUpdatingFlag] = useState(false); // Tells UI if the form is in update state or Save state
 
   // 0. Initialize DB and Load Notes on Start
   useEffect(() => {
@@ -57,6 +83,7 @@ export default function App() {
     setup();
   }, []);
 
+  // 1.LoadNotes
   const loadNotes = async () => {
     const data = await NoteManager.getNotes();
     const ids = data.map((element) => element.id);
@@ -66,7 +93,15 @@ export default function App() {
 
   // 2. Handle Adding
   const handleAdd = async () => {
-    if (!message) return Alert.alert("Error", "Message is required");
+    if (!message) {
+      (async () => {
+        await triggerHapticByValue(5);
+        setTimeout(async () => {
+          await triggerHapticByValue(4);
+        }, 50);
+      })();
+      return Alert.alert("Error", "Message is required"); // Alert user about the missing message as it will not be accepted by the database
+    }
     await NoteManager.addNote(heading, message);
     setHeading("");
     setMessage("");
@@ -76,21 +111,11 @@ export default function App() {
   // 3. Handle Deleting
   const handleDelete = async (id) => {
     await NoteManager.deleteNote(id);
+    triggerHapticByValue(5);
     loadNotes(); // Refresh list
   };
 
   // 4. Handle Update
-  const handleUpdate = async () => {
-    setHeading(popMessage.headding);
-    setMessage(popMessage.message);
-
-    console.log("entered HandleUpdate");
-    console.log(popMessage.id);
-
-    setUpdatingFlag(true);
-    setShowPop(false);
-    setShowForm(true);
-  };
 
   const performUpdate = async (id) => {
     console.log("update was entered");
@@ -112,7 +137,7 @@ export default function App() {
           heading={heading}
           message={message}
           buttonText={updatingFlag ? "Update" : "Save"}
-          onClose={() => setShowForm(false)}
+          onClose={handleClose}
           handleAdd={onSaveNote}
           setHeading={setHeading}
           setMessage={setMessage}
@@ -122,16 +147,29 @@ export default function App() {
           onPress={() => {
             setShowForm(true);
             setUpdatingFlag(false);
+            triggerHapticByValue(3);
           }}
         />
-        {/* Input Section */}
+        <TaskFullView
+          visible={showPop}
+          onClose={() => {
+            setShowPop(false);
+            triggerHapticByValue(1);
+          }}
+          infoData={popMessage}
+          handleUpdate={handleUpdate}
+        />
 
+        {/* Input Section */}
+        {/* Moved this to the Form.tsx in Components */}
         {/* List Section */}
         <FlatList
           data={notes}
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => (
-            <View style={styles.noteItem} onPress={onTap}>
+            // Main Container
+            <View style={styles.noteItem}>
+              {/* Pressable for the infoPopUp; bug: the pressable dont cover the whole view in vertical: fixed: flase */}
               <Pressable
                 style={styles.popUpButton}
                 onPress={() => {
@@ -140,8 +178,12 @@ export default function App() {
               >
                 <Text style={styles.noteHeading}>{item.headding}</Text>
                 <Text>
-                  {item.message.slice(0, 70)}
-                  {item.message.length > 70 ? "........" : ""}
+                  {/* Bug: messages spanning multiple lines due to line break still increases as it dont increase the text count */}
+                  {/* Bug is fixed by converting the line breaks into spaces so it can be counted and also properly displayed */}
+                  {item.message.replace(/\n+/g, " ").slice(0, 70)}
+                  {item.message.replace(/\n+/g, " ").length > 70
+                    ? "........"
+                    : ""}
                 </Text>
                 <Text style={styles.date}>
                   {new Date(item.date).toLocaleDateString()}
@@ -157,14 +199,6 @@ export default function App() {
           showsVerticalScrollIndicator={false}
         />
       </View>
-      <TaskFullView
-        visible={showPop}
-        onClose={() => {
-          setShowPop(false);
-        }}
-        infoData={popMessage}
-        handleUpdate={handleUpdate}
-      />
     </SafeAreaView>
   );
 }

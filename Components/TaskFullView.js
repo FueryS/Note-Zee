@@ -16,7 +16,8 @@ export default function InfoPopup({
   handleUpdate,
 }) {
   return (
-    // This is used for that scroll animation not sure how it functions but it works I will have to switch to more modern version for
+    // This is used for that scroll animation cant explain in words how it functions but it works,
+    // I will have to switch to more modern version for
     // Future projects
     <Modal
       animationType="slide"
@@ -26,18 +27,22 @@ export default function InfoPopup({
     >
       {/* Outer container that holds both layers */}
       <View style={styles.overlay}>
+        {/* Using absoluteFill so it covers the remaining backGround of the infopop */}
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
           activeOpacity={1}
           onPress={onClose}
         />
 
+        {/* This stores the main area that I see */}
         <ScrollView
           style={styles.popupContainer}
           bounces={true}
           showsVerticalScrollIndicator={false}
         >
+          {/* Heading , Date and Edit */}
           <View style={styles.handle}>
+            {/* Headding: using  scroll view due to a big I was facing when the heading size was very big */}
             <ScrollView
               showsVerticalScrollIndicator={false}
               style={{ width: "45%" }}
@@ -119,5 +124,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffcdcd",
     borderTopEndRadius: 15,
     paddingHorizontal: scale(10),
+    marginLeft: scale(8),
   },
 });
