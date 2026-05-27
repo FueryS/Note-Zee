@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 
 import CustomButton from "./Components/UI/CustomButton.js";
-import Form from "./Components/Form.tsx";
+import Form from "./Components/Form.js";
 import TaskFullView from "./Components/TaskFullView.js";
 import { triggerHapticByValue } from "./Services/HepticService.js";
 
